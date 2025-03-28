@@ -4,9 +4,10 @@ import sqlite3
 import pandas as pd
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QTableView, QVBoxLayout, QHBoxLayout,
                              QPushButton, QWidget, QLineEdit, QLabel, QComboBox, QMessageBox,
-                             QFileDialog, QTabWidget, QSplitter, QTextEdit, QHeaderView, QMenu)
-from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex
-from PyQt5.QtGui import QCursor
+                             QFileDialog, QTabWidget, QSplitter, QTextEdit, QHeaderView, QMenu,
+                             QStatusBar, QToolBar, QAction, QFrame)
+from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, QSize
+from PyQt5.QtGui import QCursor, QIcon, QFont, QColor, QPalette, QPixmap
 
 class PandasModel(QAbstractTableModel):
     """用于在QTableView中显示pandas DataFrame的模型"""
@@ -840,7 +841,107 @@ class DatabaseManager(QMainWindow):
         super().__init__()
         self.db_connection = None
         self.db_path = None
+        self.setStyleSheet(self.get_style_sheet())
         self.initUI()
+    
+    def get_style_sheet(self):
+        """返回应用程序的样式表"""
+        return """
+            QMainWindow, QDialog {
+                background-color: #f5f5f5;
+            }
+            QLabel {
+                font-size: 14px;
+            }
+            QPushButton {
+                background-color: #4a86e8;
+                color: white;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 4px;
+                font-size: 14px;
+                min-width: 100px;
+                min-height: 32px;
+            }
+            QPushButton:hover {
+                background-color: #3a76d8;
+            }
+            QPushButton:pressed {
+                background-color: #2a66c8;
+            }
+            QLineEdit, QTextEdit {
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 5px;
+                background-color: white;
+                selection-background-color: #4a86e8;
+            }
+            QTableView {
+                border: 1px solid #ccc;
+                background-color: white;
+                alternate-background-color: #f9f9f9;
+                selection-background-color: #4a86e8;
+                selection-color: white;
+                gridline-color: #e0e0e0;
+            }
+            QTableView::item {
+                padding: 5px;
+            }
+            QHeaderView::section {
+                background-color: #e0e0e0;
+                padding: 5px;
+                border: none;
+                border-right: 1px solid #ccc;
+                border-bottom: 1px solid #ccc;
+                font-weight: bold;
+            }
+            QTabWidget::pane {
+                border: 1px solid #ccc;
+                background-color: white;
+            }
+            QTabBar::tab {
+                background-color: #e0e0e0;
+                border: 1px solid #ccc;
+                border-bottom: none;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+                padding: 5px 10px;
+                margin-right: 2px;
+            }
+            QTabBar::tab:selected {
+                background-color: white;
+                border-bottom: 1px solid white;
+            }
+            QComboBox {
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 5px;
+                background-color: white;
+                min-width: 100px;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox QAbstractItemView {
+                border: 1px solid #ccc;
+                selection-background-color: #4a86e8;
+            }
+            QStatusBar {
+                background-color: #e0e0e0;
+                color: #333;
+            }
+            QMenu {
+                background-color: white;
+                border: 1px solid #ccc;
+            }
+            QMenu::item {
+                padding: 5px 20px 5px 20px;
+            }
+            QMenu::item:selected {
+                background-color: #4a86e8;
+                color: white;
+            }
+        """
     
     def initUI(self):
         self.setWindowTitle("SQLite数据库管理器")
@@ -887,6 +988,9 @@ class DatabaseManager(QMainWindow):
         
         self.setCentralWidget(central_widget)
         
+        # 添加状态栏
+        self.statusBar().showMessage("就绪")
+        
         # 添加SQL查询标签页
         self.sql_tab = None
     
@@ -902,6 +1006,8 @@ class DatabaseManager(QMainWindow):
             return
         
         try:
+            self.statusBar().showMessage("正在连接数据库...")
+            
             # 关闭现有连接
             if self.db_connection is not None:
                 self.db_connection.close()
@@ -927,8 +1033,16 @@ class DatabaseManager(QMainWindow):
             self.sql_tab = SQLQueryTab(self.db_connection)
             self.tab_widget.addTab(self.sql_tab, "SQL查询")
             
+            # 更新窗口标题
+            file_name = os.path.basename(db_path)
+            self.setWindowTitle(f"SQLite数据库管理器 - {file_name}")
+            
+            # 更新状态栏
+            self.statusBar().showMessage(f"已连接到数据库: {file_name} | 共 {len(tables)} 个表格")
+            
             QMessageBox.information(self, "成功", f"成功连接到数据库: {db_path}\n发现 {len(tables)} 个表格")
         except Exception as e:
+            self.statusBar().showMessage("连接失败")
             QMessageBox.critical(self, "错误", f"连接数据库失败: {str(e)}")
     
     def open_table(self, index):
